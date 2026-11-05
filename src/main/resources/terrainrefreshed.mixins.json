@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "net.revskymc.terrainrefreshed.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"server": [],
+	"client": [],
+	"mixins": [
+		"MultiNoiseBiomeSourceParameterListMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

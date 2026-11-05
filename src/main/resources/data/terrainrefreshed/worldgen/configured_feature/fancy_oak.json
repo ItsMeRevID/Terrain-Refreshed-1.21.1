@@ -1,0 +1,24 @@
+{
+  "config": {
+    "branch_chance": 0.75,
+    "canopy_radius": 3,
+    "form": "spreading",
+    "leaves": {
+      "Name": "minecraft:oak_leaves",
+      "Properties": {
+        "distance": "7",
+        "persistent": "false",
+        "waterlogged": "false"
+      }
+    },
+    "max_height": 10,
+    "min_height": 6,
+    "trunk": {
+      "Name": "minecraft:oak_log",
+      "Properties": {
+        "axis": "y"
+      }
+    }
+  },
+  "type": "terrainrefreshed:fancy_tree"
+}

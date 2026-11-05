@@ -1,0 +1,9 @@
+{
+  "argument1": {
+    "argument1": "terrainrefreshed:mountain_mask",
+    "argument2": "terrainrefreshed:crag_noise",
+    "type": "minecraft:mul"
+  },
+  "argument2": 0.75,
+  "type": "minecraft:mul"
+}

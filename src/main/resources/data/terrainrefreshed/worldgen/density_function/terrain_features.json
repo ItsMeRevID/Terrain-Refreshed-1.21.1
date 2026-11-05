@@ -1,0 +1,13 @@
+{
+  "argument1": "terrainrefreshed:river_carve",
+  "argument2": {
+    "argument1": "terrainrefreshed:mountain_lift",
+    "argument2": {
+      "argument1": "terrainrefreshed:crag_detail",
+      "argument2": "terrainrefreshed:rolling_relief",
+      "type": "minecraft:add"
+    },
+    "type": "minecraft:add"
+  },
+  "type": "minecraft:add"
+}

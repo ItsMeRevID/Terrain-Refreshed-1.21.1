@@ -1,0 +1,24 @@
+{
+  "config": {
+    "branch_chance": 0.85,
+    "canopy_radius": 4,
+    "form": "floral",
+    "leaves": {
+      "Name": "minecraft:cherry_leaves",
+      "Properties": {
+        "distance": "7",
+        "persistent": "false",
+        "waterlogged": "false"
+      }
+    },
+    "max_height": 11,
+    "min_height": 7,
+    "trunk": {
+      "Name": "minecraft:cherry_log",
+      "Properties": {
+        "axis": "y"
+      }
+    }
+  },
+  "type": "terrainrefreshed:fancy_tree"
+}

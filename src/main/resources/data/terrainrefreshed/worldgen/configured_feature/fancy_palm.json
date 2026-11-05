@@ -1,0 +1,24 @@
+{
+  "config": {
+    "branch_chance": 0.8,
+    "canopy_radius": 3,
+    "form": "palm",
+    "leaves": {
+      "Name": "minecraft:jungle_leaves",
+      "Properties": {
+        "distance": "7",
+        "persistent": "false",
+        "waterlogged": "false"
+      }
+    },
+    "max_height": 14,
+    "min_height": 9,
+    "trunk": {
+      "Name": "minecraft:jungle_log",
+      "Properties": {
+        "axis": "y"
+      }
+    }
+  },
+  "type": "terrainrefreshed:fancy_tree"
+}

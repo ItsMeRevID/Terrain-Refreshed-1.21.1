@@ -1,0 +1,17 @@
+{
+  "config": {
+    "bed": {
+      "Name": "minecraft:gravel"
+    },
+    "depth": 1,
+    "length": 14,
+    "water": {
+      "Name": "minecraft:water",
+      "Properties": {
+        "level": "0"
+      }
+    },
+    "width": 2
+  },
+  "type": "terrainrefreshed:stream"
+}

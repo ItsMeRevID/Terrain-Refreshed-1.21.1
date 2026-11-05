@@ -1,0 +1,14 @@
+{
+  "input": "terrainrefreshed:river_distance",
+  "max_exclusive": 0.035,
+  "min_inclusive": 0.0,
+  "type": "minecraft:range_choice",
+  "when_in_range": {
+    "argument": 1.0,
+    "type": "minecraft:constant"
+  },
+  "when_out_of_range": {
+    "argument": 0.0,
+    "type": "minecraft:constant"
+  }
+}

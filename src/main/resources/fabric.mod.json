@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "terrainrefreshed",
+	"version": "${version}",
+	"name": "Terrain Refreshed",
+	"description": "Terrain Refreshed overhauls Minecraft's world generation: realistic terrain shaping, dramatic mountains, flowing streams and rivers, 100 new biomes with hand-tuned colors, natural vegetation, and organically grown fancy trees.",
+	"authors": [
+		"RevSkyMC"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/terrain-refreshed",
+		"sources": "https://github.com/ItsMeRevID/Terrain-Refreshed"
+	},
+	"license": "MIT",
+	"icon": "assets/terrainrefreshed/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.revskymc.terrainrefreshed.TerrainRefreshed"
+		]
+	},
+	"mixins": [
+		"terrainrefreshed.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"custom": {
+		"minecraft_version": "1.21.1",
+		"author": "RevSkyMC",
+		"package": "net.revskymc.terrainrefreshed"
+	}
+}
