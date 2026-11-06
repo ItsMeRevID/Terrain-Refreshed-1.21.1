@@ -139,18 +139,24 @@ public enum TreeForm {
 
 			BlockPos top = spine.get(height - 1);
 			int radius = tree.canopyRadius();
-			int vertical = Math.max(1, radius / 2 + 1);
+			int vertical = Math.max(1, radius / 4);
 			ellipsoid(foliage, tree.leaves(), top, radius, vertical, 1.0F, random);
+
+			// The hanging curtains carry the leaf mass of a willow, so they hang from the whole rim
+			// of the crown without a dice roll and reach down to the ground. Only the positions
+			// inside the rim are a bonus.
+			int maxDrop = Math.max(2, height - vertical);
 
 			for (int dx = -radius; dx <= radius; dx++) {
 				for (int dz = -radius; dz <= radius; dz++) {
 					double offset = Math.sqrt(dx * dx + dz * dz);
 
-					if (offset < radius - 0.5 || random.nextFloat() > tree.branchChance()) {
+					if (offset > radius + 0.5 || (offset < radius - 1.0 && random.nextFloat() > tree.branchChance())) {
 						continue;
 					}
 
-					curtain(foliage, tree.leaves(), top.offset(dx, -vertical, dz), 2 + random.nextInt(radius + 2), random);
+					int drop = Math.min(radius + 2 + random.nextInt(radius + 3), maxDrop);
+					curtain(foliage, tree.leaves(), top.offset(dx, -vertical, dz), drop, random);
 				}
 			}
 
@@ -163,7 +169,7 @@ public enum TreeForm {
 				int length = 2 + random.nextInt(radius);
 				BlockPos base = spine.get(level);
 				curtain(foliage, tree.leaves(), limb(logs, tree.trunk(), base, direction, length, 1),
-					3 + random.nextInt(radius + 3), random);
+					Math.min(3 + random.nextInt(radius + 3), level), random);
 			}
 		}
 	},
@@ -257,11 +263,23 @@ public enum TreeForm {
 			logs.putIfAbsent(top.immutable(), tree.trunk());
 			logs.putIfAbsent(top.above().immutable(), tree.trunk());
 
-			for (Direction direction : shuffled(random)) {
+			// The crown of a baobab is broad even when few arms survive, so the barrel top carries
+			// a dome of its own and the arms only add clumps on top of it.
+			ellipsoid(foliage, tree.leaves(), top.above(), tree.canopyRadius(), 1, 1.0F, random);
+
+			Direction[] ring = shuffled(random);
+			int arms = 2 + random.nextInt(3);
+
+			for (Direction direction : ring) {
+				if (arms <= 0) {
+					break;
+				}
+
 				if (random.nextFloat() > 0.4F + tree.branchChance() * 0.6F) {
 					continue;
 				}
 
+				arms--;
 				BlockPos tip = limb(logs, tree.trunk(), top, direction, 2 + random.nextInt(2), 2);
 				ellipsoid(foliage, tree.leaves(), tip, 1 + random.nextInt(2), 1, 1.2F, random);
 			}

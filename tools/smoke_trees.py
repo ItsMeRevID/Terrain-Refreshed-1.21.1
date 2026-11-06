@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -57,6 +58,26 @@ def species():
         })
 
     return found
+
+
+def wait_for_chunks(rcon, timeout=180):
+    """Force loaded chunks are still generated asynchronously, so the placement has to wait."""
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        pending = []
+
+        for x, z in GRID:
+            answer = rcon.command("execute if block %d %d %d minecraft:air run seed" % (x, BASE_Y, z)).strip()
+            if "Seed:" not in answer:
+                pending.append((x, z))
+
+        if not pending:
+            return True
+
+        time.sleep(3)
+
+    return False
 
 
 def count(rcon, block, x, y, z, reach):
@@ -165,6 +186,10 @@ def main():
     rcon = Rcon(host, port, password)
     failed = []
     try:
+        # The planted positions have to be loaded, otherwise the server refuses the placement.
+        rcon.command("forceload add -64 -64 64 64")
+        wait_for_chunks(rcon)
+
         for index, tree in enumerate(trees):
             x, z = GRID[index]
             clear(rcon, tree, x, z)

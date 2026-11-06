@@ -677,10 +677,10 @@ public final class BiomeClimateTable {
 		new Entry(
 			ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("terrainrefreshed", "alpine_meadow")),
 			Climate.Parameter.span(-1F, -0.45F),
-			Climate.Parameter.span(-0.1F, 0.1F),
+			Climate.Parameter.span(-0.35F, 0.1F),
 			Climate.Parameter.span(0.03F, 1F),
 			Climate.Parameter.span(-0.375F, -0.2225F),
-			Climate.Parameter.span(0.4F, 0.7F)
+			Climate.Parameter.span(0.4F, 0.9333F)
 		),
 		new Entry(
 			ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("terrainrefreshed", "frostpeak_ridge")),

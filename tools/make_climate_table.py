@@ -61,6 +61,43 @@ def fmt(value):
     return "%.10g" % value
 
 
+AXES = ("temperature", "humidity", "continentalness", "erosion", "weirdness")
+
+# The one measured exception to the shared 26.3 anchoring. On 1.21.1 alpine_meadow's cell is the only
+# one the locate sweep could not reach: from spawn the search gave up entirely, and searches started
+# inside the nearest frozen regions - snowy_plains, frozen_peaks, jagged_peaks, snowy_slopes - all
+# returned it 6.6 to 7.1 km away, while every other cell came in under 5.3 km. Its band sits on the
+# -0.35 erosion step, the tail the erosion noise barely reaches, and the frozen, dry, high-weirdness
+# corner of the climate space is already fully partitioned between alpine_meadow, windswept_heights
+# and highland_bogs, so widening it downwards in erosion would have swallowed those two.
+#
+# The two axes with room left are the ones widened here: the drier frozen lane below it and the
+# weirdness lanes above it. Together they multiply the cell's climate area from 0.0049 to 0.0195 of
+# the space (4x, 11 vanilla biomes anchored instead of 9) and still intersect no other Terrain
+# Refreshed cell, so the biome keeps its cold, dry, mountain character instead of becoming a
+# different one. tools/climate_audit.py has to keep reporting it unshadowed after this.
+CELL_OVERRIDE = {
+    "alpine_meadow": {"humidity": (-0.35, 0.1), "weirdness": (0.4, 0.9333)},
+}
+
+
+def apply_overrides(biomes):
+    """Replace the bands a version's own terrain makes unreachable."""
+    for biome in biomes:
+        for axis, band in CELL_OVERRIDE.get(biome["id"], {}).items():
+            index = AXES.index(axis)
+            low, high = (round(value * 10000) for value in band)
+
+            if tuple(biome["cell"][index]) != (low, high):
+                print(
+                    "  override %-18s %s [%s, %s] -> [%s, %s]"
+                    % (biome["id"], axis, biome["cell"][index][0], biome["cell"][index][1], low, high)
+                )
+                cell = list(biome["cell"])
+                cell[index] = (low, high)
+                biome["cell"] = cell
+
+
 def write_table(path, biomes):
     lines = [HEADER]
 
@@ -105,6 +142,9 @@ def main():
     authored.VANILLA_DUMP = args.dump
     shelves = authored.read_shelves()
     report = authored.allocate_cells(authored.BIOMES, shelves)
+
+    print("version specific anchors:")
+    apply_overrides(authored.BIOMES)
 
     write_table(args.out, authored.BIOMES)
 
