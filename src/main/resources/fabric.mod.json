@@ -24,12 +24,12 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.20.1",
-		"minecraft": "~1.21.1",
+		"minecraft": ">=1.21.1 <1.22",
 		"java": ">=21",
 		"fabric-api": "*"
 	},
 	"custom": {
-		"minecraft_version": "1.21.1",
+		"minecraft_version": "1.21.1 - 1.21.11",
 		"author": "RevSkyMC",
 		"package": "net.revskymc.terrainrefreshed"
 	}

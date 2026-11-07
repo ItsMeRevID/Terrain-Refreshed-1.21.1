@@ -5,7 +5,8 @@
 	"server": [],
 	"client": [],
 	"mixins": [
-		"MultiNoiseBiomeSourceParameterListMixin"
+		"MultiNoiseBiomeSourceParameterListMixin",
+		"RegistryDataLoaderMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
