@@ -1,0 +1,104 @@
+# Publishes a GitHub release for every update of the mod.
+#
+# A push to main rebuilds the jar and refreshes the release that belongs to the
+# version in gradle.properties, so the repository always carries the current
+# build without anyone touching it by hand. Bumping `version=` and pushing is
+# therefore the whole release step: the tag, the title and the attached jar
+# follow the file. A tag push publishes the same build as a tagged release.
+
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: read mod version
+        id: mod
+        run: echo "version=$(grep -E '^version=' gradle.properties | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: build
+        run: ./gradlew build
+
+      - name: collect the mod jar
+        id: jar
+        run: |
+          jar=$(ls build/libs/terrainrefreshed-*.jar | grep -v -- '-sources.jar' | head -n 1)
+          echo "path=$jar" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$jar")" >> "$GITHUB_OUTPUT"
+
+          sources=$(ls build/libs/terrainrefreshed-*-sources.jar 2>/dev/null | head -n 1)
+          if [ -n "$sources" ]; then
+            echo "sources=$sources" >> "$GITHUB_OUTPUT"
+          else
+            echo "sources=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.mod.outputs.version }}
+          JAR: ${{ steps.jar.outputs.path }}
+          JAR_NAME: ${{ steps.jar.outputs.name }}
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="v${VERSION}"
+          fi
+
+          notes="Terrain Refreshed ${VERSION} for Minecraft 1.21.1 - 1.21.11, built from $(git rev-parse --short HEAD)."
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "Terrain Refreshed ${VERSION}" --notes "$notes" --latest
+            gh release upload "$tag" "$JAR" --clobber
+            echo "refreshed release $tag"
+          else
+            gh release create "$tag" "$JAR" --title "Terrain Refreshed ${VERSION}" --notes "$notes" --latest
+            echo "created release $tag"
+          fi
+
+      - name: upload the build as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Terrain-Refreshed-${{ steps.mod.outputs.version }}
+          path: build/libs/
+
+      - name: dispatch the modrinth publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -z "${MODRINTH_TOKEN}" ]; then
+            echo "no Modrinth token configured, skipping the Modrinth publication"
+            exit 0
+          fi
+
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/modrinth.yml/dispatches" -f ref=main
+          echo "dispatched the Modrinth publication workflow"

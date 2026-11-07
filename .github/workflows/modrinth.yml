@@ -1,0 +1,191 @@
+# Publishes the mod to Modrinth.
+#
+# The release workflow dispatches this one after it publishes a GitHub release,
+# so a single push to main carries the mod all the way to Modrinth. It can also
+# be started by hand from the Actions tab, with an optional dry run that prints
+# the payload instead of publishing it. Without a Modrinth token the job reports
+# that it skipped instead of failing, so the pipeline stays green until the token
+# is configured.
+#
+# This is the 1.21.x build, so it publishes to its own project and claims the
+# 1.21.x game versions. It never falls back to a default project id, because
+# publishing this jar under the project of the 26.3 build would put the wrong
+# file in front of the wrong players.
+#
+# The API expects a multipart request: a "data" part carrying the version
+# metadata as JSON, plus one part per file, with the part names listed in
+# file_parts and the primary file named in primary_file.
+#
+# Setup, once:
+#   1. create the project at https://modrinth.com/mod/<slug>
+#   2. create an access token with the "write:versions" scope
+#   3. add it as the repository secret MODRINTH_TOKEN
+#   4. add the project slug as the repository variable MODRINTH_PROJECT_ID
+
+name: modrinth
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build the Modrinth payload and print it without publishing
+        type: boolean
+        default: false
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: read mod version
+        id: mod
+        run: echo "version=$(grep -E '^version=' gradle.properties | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: build
+        run: ./gradlew build
+
+      - name: collect the build
+        id: jar
+        run: |
+          jar=$(ls build/libs/terrainrefreshed-*.jar | grep -v -- '-sources.jar' | head -n 1)
+          echo "path=$jar" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$jar")" >> "$GITHUB_OUTPUT"
+
+          sources=$(ls build/libs/terrainrefreshed-*-sources.jar 2>/dev/null | head -n 1)
+          if [ -n "$sources" ]; then
+            echo "sources=$sources" >> "$GITHUB_OUTPUT"
+          else
+            echo "sources=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: prepare the payload
+        env:
+          VERSION: ${{ steps.mod.outputs.version }}
+          JAR: ${{ steps.jar.outputs.path }}
+          SOURCES: ${{ steps.jar.outputs.sources }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_GAME_VERSIONS: ${{ vars.MODRINTH_GAME_VERSIONS || '["1.21.1","1.21.2","1.21.3","1.21.4","1.21.5","1.21.6","1.21.7","1.21.8","1.21.9","1.21.10","1.21.11"]' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          changelog=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${VERSION}" --jq '.body' 2>/dev/null \
+            || echo "Terrain Refreshed ${VERSION} for Minecraft 1.21.1 - 1.21.11.")
+
+          parts='["file"]'
+          types='{}'
+
+          if [ -n "${SOURCES}" ]; then
+            parts='["file","sources"]'
+            types='{"sources":"sources-jar"}'
+          fi
+
+          jq -n \
+            --arg name "${VERSION}" \
+            --arg number "${VERSION}" \
+            --arg changelog "${changelog}" \
+            --arg project "${MODRINTH_PROJECT_ID}" \
+            --argjson game_versions "${MODRINTH_GAME_VERSIONS}" \
+            --argjson file_parts "${parts}" \
+            --argjson file_types "${types}" \
+            '{
+              name: $name,
+              version_number: $number,
+              changelog: $changelog,
+              dependencies: [],
+              game_versions: $game_versions,
+              version_type: "release",
+              loaders: ["fabric"],
+              featured: false,
+              status: "listed",
+              project_id: $project,
+              file_parts: $file_parts,
+              primary_file: "file",
+              environment: "client_and_server",
+              file_types: $file_types
+            }' > payload.json
+
+          echo "payload written to payload.json"
+
+      - name: publish to modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          VERSION: ${{ steps.mod.outputs.version }}
+          JAR: ${{ steps.jar.outputs.path }}
+          SOURCES: ${{ steps.jar.outputs.sources }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "dry run, the version would be created with:"
+            cat payload.json
+            echo "file part: ${JAR}"
+
+            if [ -n "${SOURCES}" ]; then
+              echo "sources part: ${SOURCES}"
+            fi
+
+            exit 0
+          fi
+
+          if [ -z "${MODRINTH_TOKEN}" ] || [ -z "${MODRINTH_PROJECT_ID}" ]; then
+            echo "no Modrinth token or project id configured, nothing to publish"
+            exit 0
+          fi
+
+          api="https://api.modrinth.com/v2"
+          agent="ItsMeRevID/Terrain-Refreshed-1.21.1/${VERSION} (https://github.com/ItsMeRevID/Terrain-Refreshed-1.21.1)"
+
+          # Modrinth keeps one version per number, so an earlier upload of the same
+          # version is removed first to keep the download link stable.
+          existing=$(curl -s -H "Authorization: ${MODRINTH_TOKEN}" -H "User-Agent: ${agent}" \
+            "${api}/project/${MODRINTH_PROJECT_ID}/version?loaders=%5B%22fabric%22%5D" \
+            | jq -r --arg v "${VERSION}" '.[] | select(.version_number == $v) | .id')
+
+          for id in $existing; do
+            echo "removing superseded Modrinth version ${id}"
+            curl -s -X DELETE -H "Authorization: ${MODRINTH_TOKEN}" -H "User-Agent: ${agent}" \
+              "${api}/version/${id}" > /dev/null
+          done
+
+          echo "creating the Modrinth version"
+
+          parts=(-F "data=<payload.json;type=application/json" -F "file=@${JAR}")
+
+          if [ -n "${SOURCES}" ]; then
+            parts+=(-F "sources=@${SOURCES}")
+          fi
+
+          response=$(curl -s -w '\n%{http_code}' -X POST "${api}/version" \
+            -H "Authorization: ${MODRINTH_TOKEN}" \
+            -H "User-Agent: ${agent}" \
+            "${parts[@]}")
+
+          code=$(tail -n 1 <<< "$response")
+          body=$(sed '$d' <<< "$response")
+
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+            echo "modrinth refused the upload with http ${code}"
+            echo "$body"
+            exit 1
+          fi
+
+          echo "$body" | jq '{id, version_number, downloads, files: [.files[].filename]}'

@@ -8,8 +8,8 @@
 		"RevSkyMC"
 	],
 	"contact": {
-		"homepage": "https://modrinth.com/mod/terrain-refreshed",
-		"sources": "https://github.com/ItsMeRevID/Terrain-Refreshed"
+		"homepage": "https://github.com/ItsMeRevID/Terrain-Refreshed-1.21.1/releases/latest",
+		"sources": "https://github.com/ItsMeRevID/Terrain-Refreshed-1.21.1"
 	},
 	"license": "MIT",
 	"icon": "assets/terrainrefreshed/icon.png",
